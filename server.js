@@ -10,7 +10,7 @@ var port        = process.env.PORT || 8080;
 var jwt         = require('jwt-simple');
  
 // get our request parameters
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
  
 // log to console
@@ -18,6 +18,17 @@ app.use(morgan('dev'));
  
 // Use the passport package in our application
 app.use(passport.initialize());
+
+// Add headers
+app.use(function(req, res, next) {
+  // Website you wish to allow to connect
+    res.setHeader('Access-Control-Allow-Origin', 'http://localhost:4200');
+    // Request methods you wish to allow
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    // Request headers you wish to allow
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+    next();
+});
  
 // demo Route (GET http://localhost:8080)
 app.get('/', function(req, res) {
@@ -37,17 +48,18 @@ var apiRoutes = express.Router();
  
 // create a new user account (POST http://localhost:8080/api/signup)
 apiRoutes.post('/signup', function(req, res) {
-  if (!req.body.name || !req.body.password) {
-    res.json({success: false, msg: 'Please pass name and password.'});
+  console.log(req.body.email + " " + req.body.password);
+  if (!req.body.email || !req.body.password) {
+    res.json({success: false, msg: 'Please pass email and password.'});
   } else {
     var newUser = new User({
-      name: req.body.name,
+      email: req.body.email,
       password: req.body.password
     });
     // save the user
     newUser.save(function(err) {
       if (err) {
-        return res.json({success: false, msg: 'Username already exists.'});
+        return res.json({success: false, msg: 'Email already exists.'});
       }
       res.json({success: true, msg: 'Successful created new user.'});
     });
@@ -57,7 +69,7 @@ apiRoutes.post('/signup', function(req, res) {
 // route to authenticate a user (POST http://localhost:8080/api/authenticate)
 apiRoutes.post('/authenticate', function(req, res) {
   User.findOne({
-    name: req.body.name
+    email: req.body.email
   }, function(err, user) {
     if (err) throw err;
  
@@ -85,14 +97,14 @@ apiRoutes.get('/memberinfo', passport.authenticate('jwt', { session: false}), fu
   if (token) {
     var decoded = jwt.decode(token, config.secret);
     User.findOne({
-      name: decoded.name
+      email: decoded.email
     }, function(err, user) {
         if (err) throw err;
  
         if (!user) {
           return res.status(403).send({success: false, msg: 'Authentication failed. User not found.'});
         } else {
-          res.json({success: true, msg: 'Welcome in the member area ' + user.name + '!'});
+          res.json({success: true, msg: 'Welcome in the member area ' + user.email + '!'});
         }
     });
   } else {
